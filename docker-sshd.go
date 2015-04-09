@@ -20,19 +20,19 @@ var (
 func main() {
 
 	config := struct {
-		ListenAddr  string
-		Port        uint
-		KeyFile     string
-		ShowHelp    bool
-		ShowVersion bool
-		Host        string
-		Cmd         string
+		ListenAddr     string
+		Port           uint
+		KeyFile        string
+		ShowHelp       bool
+		ShowVersion    bool
+		DockerEndpoint string
+		Cmd            string
 	}{}
 
-	mflag.StringVar(&config.Host, []string{"H", "-host"}, "unix:///var/run/docker.sock", "docker host socket")
+	mflag.StringVar(&config.DockerEndpoint, []string{"H", "-host"}, "unix:///var/run/docker.sock", "docker host socket")
 	mflag.StringVar(&config.ListenAddr, []string{"l", "-listen_addr"}, "0.0.0.0", "Listening Address")
 	mflag.UintVar(&config.Port, []string{"p", "-port"}, 2232, "Listening Port")
-	mflag.StringVar(&config.KeyFile, []string{"i", "-server_key"}, "/etc/ssh/ssh_host_rsa_key", "Key file for SSH")
+	mflag.StringVar(&config.KeyFile, []string{"i", "-server_key"}, "/etc/ssh/ssh_host_rsa_key", "Key file for docker-sshd")
 	mflag.StringVar(&config.Cmd, []string{"c", "-command"}, "/bin/bash", "default exec command")
 	mflag.BoolVar(&config.ShowHelp, []string{"h", "-help"}, false, "Print help and exit")
 
@@ -46,9 +46,13 @@ func main() {
 		return
 	}
 
-	client, err := docker.NewClient(config.Host)
+	client, err := docker.NewClient(config.DockerEndpoint)
 	if err != nil {
 		logger.Fatalln("Cannot connect to docker %v", err)
+	}
+
+	if err := client.Ping(); err != nil {
+		logger.Println("WARNING ping docker failed")
 	}
 
 	server := &ssh.ServerConfig{
@@ -76,7 +80,7 @@ func main() {
 	}
 	defer listener.Close()
 
-	logger.Printf("Docker.sshd started")
+	logger.Printf("Docker-sshd started, Listening %s:%d", config.ListenAddr, config.Port)
 
 	for {
 		c, err := listener.Accept()
