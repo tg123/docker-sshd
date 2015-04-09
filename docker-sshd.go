@@ -160,10 +160,14 @@ func handleChannels(client *docker.Client, execID string, chans <-chan ssh.NewCh
 			})
 
 			// this call block until exec done
-			exit_status := 0
+			exit_status := -1
 
-			if err != nil {
-				exit_status = -1
+			if err == nil {
+				exec, err := client.InspectExec(execID)
+
+				if err == nil {
+					exit_status = exec.ExitCode
+				}
 			}
 
 			channel.SendRequest("exit-status", false, ssh.Marshal(&struct{ uint32 }{uint32(exit_status)}))
