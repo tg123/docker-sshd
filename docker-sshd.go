@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -36,6 +35,8 @@ func main() {
 	mflag.StringVar(&config.KeyFile, []string{"i", "-server_key"}, "/etc/ssh/ssh_host_rsa_key", "Key file for SSH")
 	mflag.StringVar(&config.Cmd, []string{"c", "-command"}, "/bin/bash", "default exec command")
 	mflag.BoolVar(&config.ShowHelp, []string{"h", "-help"}, false, "Print help and exit")
+
+	// TODO version
 	mflag.BoolVar(&config.ShowVersion, []string{"-version"}, false, "Print version and exit")
 
 	mflag.Parse()
@@ -144,7 +145,6 @@ func handleChannels(client *docker.Client, execID string, chans <-chan ssh.NewCh
 			logger.Printf("could not accept channel (%s)", err)
 			continue
 		}
-		// fire up bash for this session
 
 		go func() {
 			err := client.StartExec(execID, docker.StartExecOptions{
@@ -155,6 +155,7 @@ func handleChannels(client *docker.Client, execID string, chans <-chan ssh.NewCh
 				RawTerminal:  false,
 			})
 
+			// this call block until exec done
 			exit_status := 0
 
 			if err != nil {
@@ -168,44 +169,69 @@ func handleChannels(client *docker.Client, execID string, chans <-chan ssh.NewCh
 		}()
 
 		// Sessions have out-of-band requests such as "shell", "pty-req" and "env"
+		// https://tools.ietf.org/html/rfc4254#
+		// TODO impl more
+
 		go func(in <-chan *ssh.Request) {
 			for req := range in {
 				ok := false
+
 				switch req.Type {
+
 				case "shell":
-					// We don't accept any commands (Payload),
-					// only the default shell.
 					if len(req.Payload) == 0 {
 						ok = true
 					}
+
 				case "pty-req":
 					// Responding 'ok' here will let the client
 					// know we have a pty ready for input
 					ok = true
-					// Parse body...
-					termLen := req.Payload[3]
-					termEnv := string(req.Payload[4 : termLen+4])
-					h, w := parseDims(req.Payload[termLen+4:])
-					client.ResizeExecTTY(execID, h, w)
-					logger.Printf("pty-req '%s'", termEnv)
+
+					msg := struct {
+						Term   string
+						Width  uint32
+						Height uint32
+					}{}
+
+					ssh.Unmarshal(req.Payload, &msg)
+
+					client.ResizeExecTTY(execID, int(msg.Height), int(msg.Width))
+
+					logger.Printf("pty-req '%v' %v * %v", msg.Term, msg.Height, msg.Width)
+
 				case "window-change":
-					h, w := parseDims(req.Payload)
-					client.ResizeExecTTY(execID, h, w)
-					logger.Printf("windows-changed %v, %v", h, w)
-					continue //no response
+
+					msg := struct {
+						Width  uint32
+						Height uint32
+					}{}
+
+					ssh.Unmarshal(req.Payload, &msg)
+
+					client.ResizeExecTTY(execID, int(msg.Height), int(msg.Width))
+
+					logger.Printf("windows-changed %v * %v", msg.Height, msg.Width)
+
+					// find way for this
+					//case "env":
+
+					//	msg := struct {
+					//		Name  string
+					//		Value string
+					//	}{}
+
+					//	ssh.Unmarshal(req.Payload, &msg)
+
+					//    fmt.Println(msg)
+				default:
+					logger.Printf("unhandled req type %v", req.Type)
 				}
-				if !ok {
-					logger.Printf("declining %s request...", req.Type)
+
+				if req.WantReply {
+					req.Reply(ok, nil)
 				}
-				req.Reply(ok, nil)
 			}
 		}(requests)
 	}
-}
-
-// parseDims extracts terminal dimensions (width x height) from the provided buffer.
-func parseDims(b []byte) (int, int) {
-	w := binary.BigEndian.Uint32(b)
-	h := binary.BigEndian.Uint32(b[4:])
-	return int(h), int(w)
 }
