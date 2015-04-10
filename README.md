@@ -1,7 +1,7 @@
 # Docker-sshd
 
 with `docker-sshd`, you can `ssh` into docker containers from anywhere, 
-just like `docker exec -ti CONTAINER_ID /bin/bash` the docker host machine.
+just like `docker exec -ti CONTAINER_ID /bin/bash` on the docker host machine.
 
 ```
 +-------------+                                                                 
@@ -23,10 +23,7 @@ just like `docker exec -ti CONTAINER_ID /bin/bash` the docker host machine.
                 |          +------------+  +------------+    +------------+    |
                 |                                                              |
                 +--------------------------------------------------------------+
-
-
 ```
-
 
 
 # Install
