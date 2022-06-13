@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/docker/docker/pkg/mflag"
+	"github.com/weaveworks/common/mflag"
 	"github.com/fsouza/go-dockerclient"
 )
 
