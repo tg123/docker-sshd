@@ -56,10 +56,7 @@ func main() {
 	}
 
 	server := &ssh.ServerConfig{
-		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
-			// TODO query
-			return nil, nil
-		},
+		NoClientAuth: true,
 	}
 
 	privateBytes, err := ioutil.ReadFile(config.KeyFile)
