@@ -49,7 +49,7 @@ func (b *Bridge) handleNewChannels(chans <-chan ssh.NewChannel) {
 		handler, ok := handlers[t]
 		if !ok {
 			log.Warnf("channel type is not supported, got [%v]", t)
-			newChannel.Reject(ssh.UnknownChannelType, fmt.Sprintf("unknown channel type: %s", t))
+			_ = newChannel.Reject(ssh.UnknownChannelType, fmt.Sprintf("unknown channel type: %s", t))
 			continue
 		}
 
@@ -291,7 +291,7 @@ func (b *Bridge) handleSession(channel ssh.Channel, requests <-chan *ssh.Request
 		}
 
 		if req.WantReply {
-			req.Reply(err == nil, nil)
+			_ = req.Reply(err == nil, nil)
 		}
 	}
 }
@@ -299,7 +299,7 @@ func (b *Bridge) handleSession(channel ssh.Channel, requests <-chan *ssh.Request
 func handleKeepAlive(reqs <-chan *ssh.Request) {
 	for req := range reqs {
 		if req.Type == "keepalive@openssh.com" {
-			req.Reply(true, nil)
+			_ = req.Reply(true, nil)
 			continue
 		}
 		log.Printf("recieved out-of-band request: %v", req)
