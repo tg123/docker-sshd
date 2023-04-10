@@ -26,10 +26,10 @@ just like `docker exec -ti CONTAINER_ID /bin/bash` on the docker host machine.
 ```
 
 
-# Install
+## Install
 
 ```
-go get github.com/tg123/docker-sshd
+go get github.com/tg123/docker-sshd/cmd/docker-sshd
 ```
 
 # Quick start
@@ -44,7 +44,7 @@ go get github.com/tg123/docker-sshd
   1. start `docker-sshd`
 
     ```
-    $GOPATH/bin/docker-sshd
+    docker-sshd
     ```
 
   1. connect to container with ssh
@@ -54,17 +54,25 @@ go get github.com/tg123/docker-sshd
     root@bd78d93154cf:/#
     ```
 
-
-
-# Configuration
+## Options
 
 ```
-  -c, --command=/bin/bash                       default exec command
-  -H, --host=unix:///var/run/docker.sock        docker host socket
-  -h, --help=false                              Print help and exit
-  -i, --server_key=/etc/ssh/ssh_host_rsa_key    Key file for docker-sshd
-  -l, --listen_addr=0.0.0.0                     Listening Address
-  -p, --port=2232                               Listening Port
-  --version=false                               Print version and exit
+--address value, -l value     listening address (default: "0.0.0.0")
+--port value, -p value        listening port (default: 2232)
+--server-key value, -i value  server key files, support wildcard (default: "/etc/ssh/ssh_host_ed25519_key")
+--command value, -c value     default exec command (default: "/bin/sh")
 ```
 
+### Docker related Environment
+
+ * `DOCKER_HOST to` set the URL to the docker server, default unix:///var/run/docker.sock.
+ * `DOCKER_API_VERSION` to set the version of the API to use, leave empty for latest.
+ * `DOCKER_CERT_PATH` to specify the directory from which to load the TLS certificates (ca.pem, cert.pem, key.pem).
+ * `DOCKER_TLS_VERIFY` to enable or disable TLS verification (off by default).
+
+see <https://pkg.go.dev/github.com/docker/docker/client#FromEnv> for more detail
+
+## Connecting from vscode
+
+Make sure your container meet the [prerequisites](https://code.visualstudio.com/docs/remote/linux#_remote-host-container-wsl-linux-prerequisites).
+Additionally, install [nc](https://linux.die.net/man/1/nc) to your container to have tcp redirect working

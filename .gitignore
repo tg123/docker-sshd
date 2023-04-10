@@ -22,4 +22,5 @@ _testmain.go
 *.exe
 *.test
 *.prof
-docker-sshd
+
+cmd/docker-sshd/docker-sshd
