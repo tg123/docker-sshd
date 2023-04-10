@@ -71,6 +71,8 @@ type session struct {
 
 	execId string
 
+	env []string
+
 	width         uint32
 	height        uint32
 	term          string // unused
@@ -157,6 +159,7 @@ func (s *session) exec(cmd string) error {
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
+		Env:          s.env,
 		Tty:          s.ptyRequested,
 		Cmd:          []string{cmd},
 	})
@@ -246,7 +249,9 @@ func (s *session) handleEnv(payload []byte) error {
 		return err
 	}
 
-	return fmt.Errorf("env not supported")
+	s.env = append(s.env, fmt.Sprintf("%s=%s", msg.Name, msg.Varible))
+
+	return nil
 }
 
 func (s *session) handleExec(payload []byte) error {
