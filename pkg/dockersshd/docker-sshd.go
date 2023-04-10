@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -161,7 +162,7 @@ func (s *session) exec(cmd string) error {
 		AttachStderr: true,
 		Env:          s.env,
 		Tty:          s.ptyRequested,
-		Cmd:          []string{cmd},
+		Cmd:          strings.Split(cmd, " "),
 	})
 
 	if err != nil {
@@ -188,21 +189,14 @@ func (s *session) exec(cmd string) error {
 		defer attach.Close()
 		defer s.channel.Close()
 
-		done := make(chan error, 2)
-
 		go func() {
-			_, err := io.Copy(attach.Conn, s.channel)
-			done <- err
+			defer attach.CloseWrite()
+			_, _ = io.Copy(attach.Conn, s.channel)
 		}()
 
-		go func() {
-			_, err := io.Copy(s.channel, attach.Reader)
-			done <- err
-		}()
+		_, _ = io.Copy(s.channel, attach.Reader)
 
-		err := <-done
-
-		log.Infof("docker exec [%v] in container [%v] done with err %v", cmd, s.bridge.containerName, err)
+		log.Infof("docker exec [%v] in container [%v] done", cmd, s.bridge.containerName)
 
 		exitCode := -1
 		st := time.Now()
@@ -220,7 +214,7 @@ func (s *session) exec(cmd string) error {
 				continue
 			}
 
-			if exec.Running {
+			if exec.Running { // this should not happen
 				log.Warnf("exec %v is still running in container %v", execID, exec.ContainerID)
 				time.Sleep(1 * time.Second)
 				continue
