@@ -1,4 +1,4 @@
-module docker-sshd
+module github.com/tg123/docker-sshd
 
 go 1.20
 
