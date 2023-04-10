@@ -3,7 +3,7 @@ module docker-sshd
 go 1.20
 
 require (
-	github.com/docker/docker v20.10.23+incompatible
+	github.com/docker/docker v20.10.24+incompatible
 	github.com/sirupsen/logrus v1.9.0
 	github.com/urfave/cli/v2 v2.25.1
 	golang.org/x/crypto v0.8.0
