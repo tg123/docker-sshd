@@ -1,8 +1,8 @@
 package main
 
 import (
-	"docker-sshd/pkg/dockersshd"
 	"fmt"
+	"github.com/tg123/docker-sshd/pkg/dockersshd"
 	"net"
 	"os"
 
