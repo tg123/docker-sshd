@@ -190,7 +190,7 @@ func (s *session) exec(cmd string) error {
 		defer s.channel.Close()
 
 		go func() {
-			defer attach.CloseWrite()
+			defer func() { _ = attach.CloseWrite() }()
 			_, _ = io.Copy(attach.Conn, s.channel)
 		}()
 
