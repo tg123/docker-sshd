@@ -13,6 +13,8 @@ import (
 	"k8s.io/client-go/util/exec"
 )
 
+var _ bridge.SessionProvider = (*kubesshdconn)(nil)
+
 type kubesshdconn struct {
 	config    *restclient.Config
 	namespace string
@@ -109,7 +111,7 @@ func (k *kubesshdconn) Resize(ctx context.Context, height, width uint) error {
 	return fmt.Errorf("resize failed")
 }
 
-func New(config *restclient.Config, namespace, pod, container string) (bridge.SessionProvier, error) {
+func New(config *restclient.Config, namespace, pod, container string) (bridge.SessionProvider, error) {
 
 	return &kubesshdconn{
 		config:      config,

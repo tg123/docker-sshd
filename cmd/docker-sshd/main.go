@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/tg123/docker-sshd/pkg/dockersshd"
 	"net"
 	"os"
+
+	"github.com/tg123/docker-sshd/pkg/bridge"
+	"github.com/tg123/docker-sshd/pkg/dockersshd"
 
 	"github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
@@ -20,6 +22,8 @@ func main() {
 		KeyFile    string
 		Cmd        string
 	}{}
+
+	log.SetLevel(log.DebugLevel)
 
 	app := &cli.App{
 		Name:  "docker-sshd",
@@ -108,12 +112,10 @@ func main() {
 					continue
 				}
 
-				b, err := dockersshd.New(c, sshserver, &dockersshd.BridgeConfig{
-					Cmd: config.Cmd,
-					ContainerNameFinder: func(cm ssh.ConnMetadata) string {
-						return cm.User()
-					},
-					DockerClient: dockercli,
+				b, err := bridge.New(c, sshserver, &bridge.BridgeConfig{
+					DefaultCmd: config.Cmd,
+				}, func(sc *ssh.ServerConn) (bridge.SessionProvider, error) {
+					return dockersshd.New(dockercli, sc.User())
 				})
 
 				if err != nil {

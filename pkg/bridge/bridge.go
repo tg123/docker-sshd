@@ -27,7 +27,7 @@ type ExecResult struct {
 	Error    error
 }
 
-type SessionProvier interface {
+type SessionProvider interface {
 	// Resize send resize request to container
 	Resize(context.Context, uint, uint) error
 
@@ -47,7 +47,7 @@ type Bridge struct {
 	defaultcmd string
 	sshConn    ssh.Conn
 	chans      <-chan ssh.NewChannel
-	provider   SessionProvier
+	provider   SessionProvider
 }
 
 func (b *Bridge) Start() {
@@ -266,7 +266,7 @@ func (b *Bridge) handleSession(channel ssh.Channel, requests <-chan *ssh.Request
 		}
 
 		if err != nil {
-			log.Warnf("failed to handle request: %v", err)
+			log.Warnf("failed to handle %v request: %v", req.Type, err)
 		}
 
 		if req.WantReply {
@@ -317,7 +317,7 @@ func (b *Bridge) handleDirectTcpip(channel ssh.Channel, requests <-chan *ssh.Req
 	}
 }
 
-func New(conn net.Conn, sshconfig *ssh.ServerConfig, bridgeconfig *BridgeConfig, providerCreater func(*ssh.ServerConn) (SessionProvier, error)) (*Bridge, error) {
+func New(conn net.Conn, sshconfig *ssh.ServerConfig, bridgeconfig *BridgeConfig, providerCreater func(*ssh.ServerConn) (SessionProvider, error)) (*Bridge, error) {
 
 	sshConn, chans, reqs, err := ssh.NewServerConn(conn, sshconfig)
 	if err != nil {
