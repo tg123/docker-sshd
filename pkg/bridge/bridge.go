@@ -152,7 +152,7 @@ func (s *session) doResize() error {
 	if !s.resizePending {
 		return nil
 	}
-	
+
 	log.Debugf("resize %v %v", s.width, s.height)
 
 	s.resizeLock.Lock()
