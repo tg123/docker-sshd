@@ -58,7 +58,7 @@ func (k *kubesshdconn) Exec(ctx context.Context, execconfig bridge.ExecConfig) (
 			Command:   execconfig.Cmd,
 			Stdin:     true,
 			Stdout:    true,
-			Stderr:    execconfig.Tty, // only attach stderr if tty is enabled
+			Stderr:    true,
 			TTY:       execconfig.Tty,
 		},
 		scheme.ParameterCodec,

@@ -149,11 +149,11 @@ func (s *session) resize(width, height uint32) error {
 }
 
 func (s *session) doResize() error {
-	log.Debugf("resize %v %v", s.width, s.height)
-
 	if !s.resizePending {
 		return nil
 	}
+	
+	log.Debugf("resize %v %v", s.width, s.height)
 
 	s.resizeLock.Lock()
 	defer s.resizeLock.Unlock()

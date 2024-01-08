@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 
 	"github.com/tg123/docker-sshd/pkg/bridge"
 	"github.com/tg123/docker-sshd/pkg/kubesshd"
@@ -24,11 +25,9 @@ func main() {
 		Namespace  string
 	}{}
 
-	log.SetLevel(log.DebugLevel)
-
 	app := &cli.App{
 		Name:  "docker-sshd",
-		Usage: "make docker container sshable",
+		Usage: "make pod container sshable",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "address",
@@ -115,7 +114,7 @@ func main() {
 			}
 			defer listener.Close()
 
-			log.Printf("docker-sshd started, listening at %v", addr)
+			log.Printf("kube-sshd started, listening at %v", addr)
 
 			for {
 				c, err := listener.Accept()
@@ -127,7 +126,27 @@ func main() {
 				b, err := bridge.New(c, sshserver, &bridge.BridgeConfig{
 					DefaultCmd: config.Cmd,
 				}, func(sc *ssh.ServerConn) (bridge.SessionProvider, error) {
-					kube, err := kubesshd.New(kubeClientConfig, config.Namespace, sc.User(), "") // only default container supported
+
+					full := sc.User()
+
+					parts := strings.Split(full, "/")
+
+					ns := config.Namespace
+					pod := full
+					container := ""
+
+					switch len(parts) {
+					case 2: // Format: pod/container
+						pod = parts[0]
+						container = parts[1]
+					case 3: // Format: namespace/pod/container
+						ns = parts[0]
+						pod = parts[1]
+						container = parts[2]
+					default:
+					}
+
+					kube, err := kubesshd.New(kubeClientConfig, ns, pod, container)
 					if err != nil {
 						return nil, err
 					}

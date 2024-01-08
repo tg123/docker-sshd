@@ -53,7 +53,7 @@ func (d *dockersshdconn) Exec(ctx context.Context, execconfig bridge.ExecConfig)
 		return nil, err
 	}
 
-	log.Infof("docker exec [%v] in container [%v] started", execconfig.Cmd, d.containerName)
+	log.Debugf("docker exec [%v] in container [%v] started", execconfig.Cmd, d.containerName)
 
 	r := make(chan bridge.ExecResult)
 
@@ -80,7 +80,7 @@ func (d *dockersshdconn) Exec(ctx context.Context, execconfig bridge.ExecConfig)
 			return
 		}
 
-		log.Infof("docker exec [%v] in container [%v] done error [%v]", execconfig.Cmd, d.containerName, err)
+		log.Debugf("docker exec [%v] in container [%v] done error [%v]", execconfig.Cmd, d.containerName, err)
 
 		exitCode := -1
 		st := time.Now()
