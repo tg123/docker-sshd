@@ -14,12 +14,11 @@ import (
 )
 
 type ExecConfig struct {
-	Tty    bool
-	Stdin  io.Reader
-	Stderr io.Writer
-	Stdout io.Writer
+	Input  io.Reader
+	Output io.Writer
 	Env    []string
 	Cmd    []string
+	Tty    bool
 }
 
 type ExecResult struct {
@@ -27,15 +26,17 @@ type ExecResult struct {
 	Error    error
 }
 
+type ResizeOptions struct {
+	Height uint
+	Width  uint
+}
+
 type SessionProvider interface {
 	// Resize send resize request to container
-	Resize(context.Context, uint, uint) error
+	Resize(context.Context, ResizeOptions) error
 
 	// Exec start command in container, will be called only once
 	Exec(context.Context, ExecConfig) (<-chan ExecResult, error)
-
-	// Close close provider
-	Close() error
 }
 
 type BridgeConfig struct {
@@ -159,8 +160,10 @@ func (s *session) doResize() error {
 
 	if err := s.bridge.provider.Resize(
 		context.Background(),
-		uint(s.height),
-		uint(s.width),
+		ResizeOptions{
+			Height: uint(s.height),
+			Width:  uint(s.width),
+		},
 	); err != nil {
 		return err
 	}
@@ -183,9 +186,8 @@ func (s *session) exec(cmd string) error {
 	log.Debugf("exec [%v] in container", cmd)
 
 	r, err := s.bridge.provider.Exec(context.Background(), ExecConfig{
-		Stdin:  s.channel,
-		Stdout: s.channel,
-		Stderr: s.channel,
+		Input:  s.channel,
+		Output: s.channel,
 		Env:    s.env,
 		Tty:    s.ptyRequested,
 		Cmd:    strings.Split(cmd, " "),
@@ -302,8 +304,8 @@ func (b *Bridge) handleDirectTcpip(channel ssh.Channel, requests <-chan *ssh.Req
 	}
 
 	r, err := b.provider.Exec(context.Background(), ExecConfig{
-		Stdin:  channel,
-		Stdout: channel,
+		Input:  channel,
+		Output: channel,
 		Cmd:    []string{"nc", msg.HostToConnect, fmt.Sprintf("%v", msg.PortToConnect)},
 	})
 

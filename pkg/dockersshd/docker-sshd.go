@@ -7,7 +7,6 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/stdcopy"
 	log "github.com/sirupsen/logrus"
 	"github.com/tg123/docker-sshd/pkg/bridge"
 )
@@ -20,6 +19,7 @@ type dockersshdconn struct {
 	containerName string
 	dockercli     *client.Client
 	execId        string
+	initSize      bridge.ResizeOptions
 }
 
 func (d *dockersshdconn) Close() error {
@@ -27,14 +27,14 @@ func (d *dockersshdconn) Close() error {
 }
 
 func (d *dockersshdconn) Exec(ctx context.Context, execconfig bridge.ExecConfig) (<-chan bridge.ExecResult, error) {
-
 	exec, err := d.dockercli.ContainerExecCreate(ctx, d.containerName, types.ExecConfig{
-		AttachStdin:  execconfig.Stdin != nil,
-		AttachStdout: execconfig.Stdout != nil,
-		AttachStderr: execconfig.Stderr != nil,
-		Env:          execconfig.Env,
+		AttachStdin:  true,
+		AttachStdout: true,
+		AttachStderr: execconfig.Tty, // only attach stderr if tty is enabled
 		Tty:          execconfig.Tty,
+		Env:          execconfig.Env,
 		Cmd:          execconfig.Cmd,
+		ConsoleSize:  &[2]uint{d.initSize.Height, d.initSize.Width},
 	})
 
 	if err != nil {
@@ -46,12 +46,14 @@ func (d *dockersshdconn) Exec(ctx context.Context, execconfig bridge.ExecConfig)
 
 	attach, err := d.dockercli.ContainerExecAttach(ctx, execID, types.ExecStartCheck{
 		Detach: false,
-		// Tty: true,
+		Tty:    true,
 	})
 
 	if err != nil {
 		return nil, err
 	}
+
+	log.Infof("docker exec [%v] in container [%v] started", execconfig.Cmd, d.containerName)
 
 	r := make(chan bridge.ExecResult)
 
@@ -61,25 +63,12 @@ func (d *dockersshdconn) Exec(ctx context.Context, execconfig bridge.ExecConfig)
 		done := make(chan error, 2)
 
 		go func() {
-
-			stdout := execconfig.Stdout
-			stderr := execconfig.Stderr
-
-			// this should not happend as we did not call for open stdout if stdout is nil, but just for safety
-			if stdout == nil {
-				stdout = io.Discard
-			}
-
-			if stderr == nil {
-				stderr = io.Discard
-			}
-
-			_, err := stdcopy.StdCopy(stdout, stderr, attach.Reader)
-			done <- err
+			_, _ = io.Copy(attach.Conn, execconfig.Input)
+			// stdin is closed by client but it still need to wait for stdout close
 		}()
 
 		go func() {
-			_, err := io.Copy(attach.Conn, execconfig.Stdin)
+			_, err := io.Copy(execconfig.Output, attach.Reader)
 			done <- err
 		}()
 
@@ -91,7 +80,7 @@ func (d *dockersshdconn) Exec(ctx context.Context, execconfig bridge.ExecConfig)
 			return
 		}
 
-		log.Infof("docker exec [%v] in container [%v] done", execconfig.Cmd, d.containerName)
+		log.Infof("docker exec [%v] in container [%v] done error [%v]", execconfig.Cmd, d.containerName, err)
 
 		exitCode := -1
 		st := time.Now()
@@ -133,15 +122,15 @@ func (d *dockersshdconn) Exec(ctx context.Context, execconfig bridge.ExecConfig)
 	return r, nil
 }
 
-func (d *dockersshdconn) Resize(ctx context.Context, width uint, height uint) error {
-
+func (d *dockersshdconn) Resize(ctx context.Context, size bridge.ResizeOptions) error {
 	if d.execId == "" {
+		d.initSize = size
 		return nil
 	}
 
 	return d.dockercli.ContainerExecResize(ctx, d.execId, types.ResizeOptions{
-		Height: height,
-		Width:  width,
+		Height: size.Height,
+		Width:  size.Width,
 	})
 }
 

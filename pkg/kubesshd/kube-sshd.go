@@ -56,9 +56,9 @@ func (k *kubesshdconn) Exec(ctx context.Context, execconfig bridge.ExecConfig) (
 		&v1.PodExecOptions{
 			Container: k.container,
 			Command:   execconfig.Cmd,
-			Stdin:     execconfig.Stdin != nil,
-			Stdout:    execconfig.Stdout != nil,
-			Stderr:    execconfig.Stderr != nil,
+			Stdin:     true,
+			Stdout:    true,
+			Stderr:    execconfig.Tty, // only attach stderr if tty is enabled
 			TTY:       execconfig.Tty,
 		},
 		scheme.ParameterCodec,
@@ -76,10 +76,10 @@ func (k *kubesshdconn) Exec(ctx context.Context, execconfig bridge.ExecConfig) (
 		k.cancel = cancel
 
 		err := executor.StreamWithContext(ctx, remotecommand.StreamOptions{
-			Stdin:             execconfig.Stdin,
-			Stdout:            execconfig.Stdout,
-			Stderr:            execconfig.Stderr,
-			Tty:               true,
+			Stdin:             execconfig.Input,
+			Stdout:            execconfig.Output,
+			Stderr:            execconfig.Output,
+			Tty:               execconfig.Tty,
 			TerminalSizeQueue: k,
 		})
 
@@ -98,11 +98,11 @@ func (k *kubesshdconn) Exec(ctx context.Context, execconfig bridge.ExecConfig) (
 	return r, nil
 }
 
-func (k *kubesshdconn) Resize(ctx context.Context, height, width uint) error {
+func (k *kubesshdconn) Resize(ctx context.Context, size bridge.ResizeOptions) error {
 	select {
 	case k.resizeQueue <- &remotecommand.TerminalSize{
-		Height: uint16(height),
-		Width:  uint16(width),
+		Height: uint16(size.Height),
+		Width:  uint16(size.Width),
 	}:
 		return nil
 	default:
