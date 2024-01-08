@@ -1,4 +1,6 @@
-# Docker-sshd
+# docker-sshd && kube-sshd
+
+## docker-sshd
 
 with `docker-sshd`, you can `ssh` into docker containers from anywhere, 
 just like `docker exec -ti CONTAINER_ID /bin/bash` on the docker host machine.
@@ -25,6 +27,32 @@ just like `docker exec -ti CONTAINER_ID /bin/bash` on the docker host machine.
                 +--------------------------------------------------------------+
 ```
 
+## kube-sshd
+
+with `kube-sshd`, you can `ssh` into kubenetes pod from anywhere, 
+just like `kubectl exec -ti POD /bin/bash`.
+
+```
++-------------+                                                                 
+|             |    ssh POD1@kube-sshd              +--------------------+       
+|     ops     +------------------------------------>                    |       
+|             |                                    |    kube-sshd       |       
++-------------+                                    |                    |       
+                                                   +----------------+---+       
+                                                                    |           
+                                                                    |           
+                             kubectl exec -ti POD1 /bin/bash        |           
+                                                                    |           
+                +--------------------------------------------------------------+
+                |                                                   |          |
+                | k8s      +------------+  +------------+    +------v-----+    |
+                |          |            |  |            |    |            |    |
+                |          |    POD1    |  |    POD2    |    |    POD3    |    |
+                |          |            |  |            |    |            |    |
+                |          +------------+  +------------+    +------------+    |
+                |                                                              |
+                +--------------------------------------------------------------+
+```
 
 ## Install
 
