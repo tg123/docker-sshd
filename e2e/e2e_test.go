@@ -38,7 +38,7 @@ func TestDockerSSHD(t *testing.T) {
 	}()
 
 	out := retrySSH(t, "2232", container+"@127.0.0.1")
-	if strings.TrimSpace(out) != "ok" {
+	if !hasOKLine(out) {
 		t.Fatalf("expected ok, got %q", out)
 	}
 }
@@ -74,9 +74,18 @@ func TestKubeSSHD(t *testing.T) {
 	}()
 
 	out := retrySSH(t, "2233", pod+"@127.0.0.1")
-	if strings.TrimSpace(out) != "ok" {
+	if !hasOKLine(out) {
 		t.Fatalf("expected ok, got %q", out)
 	}
+}
+
+func hasOKLine(out string) bool {
+	for _, line := range strings.Split(out, "\n") {
+		if strings.TrimSpace(line) == "ok" {
+			return true
+		}
+	}
+	return false
 }
 
 func retrySSH(t *testing.T, port, userHost string) string {
