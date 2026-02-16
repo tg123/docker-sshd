@@ -52,3 +52,4 @@ jobs:
         run: |
           go run ./cmd/docker-sshd --help > /dev/null
           go run ./cmd/kube-sshd --help > /dev/null
+          go run ./cmd/cri-sshd --help > /dev/null
