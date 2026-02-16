@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
 	"github.com/tg123/docker-sshd/pkg/bridge"
@@ -128,7 +129,7 @@ func (d *dockersshdconn) Resize(ctx context.Context, size bridge.ResizeOptions) 
 		return nil
 	}
 
-	return d.dockercli.ContainerExecResize(ctx, d.execId, types.ResizeOptions{
+	return d.dockercli.ContainerExecResize(ctx, d.execId, container.ResizeOptions{
 		Height: size.Height,
 		Width:  size.Width,
 	})
