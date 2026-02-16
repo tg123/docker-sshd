@@ -9,7 +9,7 @@ services:
       dockerfile: e2e/Dockerfile.testrunner
     depends_on:
       - docker-sshd-e2e-target
-    network_mode: host
+    privileged: true
     working_dir: /src
     environment:
       - KUBECONFIG=/root/.kube/config
@@ -25,8 +25,16 @@ services:
         mkdir -p /tmp/bin
         go build -o /tmp/bin/docker-sshd ./cmd/docker-sshd
         go build -o /tmp/bin/kube-sshd ./cmd/kube-sshd
+        if [ "$${KUBE_SSHD_E2E:-1}" = "1" ]; then
+          kind get clusters | grep -qx docker-sshd-e2e || kind create cluster --name docker-sshd-e2e
+          kind export kubeconfig --name docker-sshd-e2e --internal
+          kubectl wait --for=condition=Ready pod -n kube-system --all --timeout=2m
+        fi
         DOCKER_SSHD_E2E=$${DOCKER_SSHD_E2E:-1} \
         KUBE_SSHD_E2E=$${KUBE_SSHD_E2E:-1} \
         DOCKER_SSHD_BIN=/tmp/bin/docker-sshd \
         KUBE_SSHD_BIN=/tmp/bin/kube-sshd \
         go test ./e2e -v
+        if [ "$${KUBE_SSHD_E2E:-1}" = "1" ]; then
+          kind delete cluster --name docker-sshd-e2e || true
+        fi

@@ -1,5 +1,6 @@
 FROM golang:1.26
 
-RUN apt-get update && apt-get install -y --no-install-recommends openssh-client curl ca-certificates && rm -rf /var/lib/apt/lists/* \
+RUN apt-get update && apt-get install -y --no-install-recommends openssh-client curl ca-certificates docker.io && rm -rf /var/lib/apt/lists/* \
     && curl -fsSL https://dl.k8s.io/release/v1.34.1/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl \
+    && GOBIN=/usr/local/bin go install sigs.k8s.io/kind@v0.30.0 \
     && chmod +x /usr/local/bin/kubectl

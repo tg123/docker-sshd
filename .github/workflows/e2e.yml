@@ -22,12 +22,8 @@ jobs:
           fetch-depth: 0
           submodules: 'recursive'
 
-      - name: Set up kind
-        uses: helm/kind-action@v1.12.0
-
       - name: Run e2e tests in docker compose runner
         run: |
-          export KUBECONFIG=/home/runner/.kube/config
           docker compose -f e2e/docker-compose.yml up -d docker-sshd-e2e-target
           trap "docker compose -f e2e/docker-compose.yml down || true" EXIT
           docker compose -f e2e/docker-compose.yml run --rm e2e-runner
