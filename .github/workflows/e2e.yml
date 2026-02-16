@@ -1,0 +1,48 @@
+name: e2e
+
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: 'recursive'
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.26.x'
+          cache: true
+
+      - name: Run docker-sshd e2e check
+        run: |
+          docker compose -f .github/e2e/docker-compose.yml up -d
+          sshd_pid=""
+          trap "test -n \"${sshd_pid}\" && kill ${sshd_pid} || true; docker compose -f .github/e2e/docker-compose.yml down || true" EXIT
+          ssh-keygen -t ed25519 -N '' -f /tmp/docker-sshd-e2e-key > /dev/null
+          go run ./cmd/docker-sshd --address 127.0.0.1 --port 2232 --server-key /tmp/docker-sshd-e2e-key &
+          sshd_pid=$!
+          output=""
+          for _ in $(seq 1 20); do
+            output="$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PreferredAuthentications=none -p 2232 docker-sshd-e2e-test@127.0.0.1 echo ok)" && break
+            sleep 1
+          done
+          test "${output}" = "ok" || (echo "docker-sshd e2e failed: expected 'ok', got '${output}'" && exit 1)
+
+      - name: Run kube-sshd smoke check
+        run: |
+          go run ./cmd/kube-sshd --help > /dev/null
