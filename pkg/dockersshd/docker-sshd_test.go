@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/docker/docker/client"
@@ -113,11 +114,20 @@ func TestExecCreateErrorIncludesDockerMessage(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error from exec create")
 	}
+	if !strings.Contains(err.Error(), "create failed") {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if got, want := req.AttachStderr, false; got != want {
 		t.Fatalf("unexpected AttachStderr: got %v want %v", got, want)
 	}
 	if got, want := req.Tty, false; got != want {
 		t.Fatalf("unexpected Tty: got %v want %v", got, want)
+	}
+	if len(req.Cmd) != 1 || req.Cmd[0] != "/bin/sh" {
+		t.Fatalf("unexpected Cmd: got %#v", req.Cmd)
+	}
+	if len(req.Env) != 1 || req.Env[0] != "A=B" {
+		t.Fatalf("unexpected Env: got %#v", req.Env)
 	}
 }
