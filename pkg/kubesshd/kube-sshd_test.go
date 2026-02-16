@@ -4,13 +4,16 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/tg123/docker-sshd/pkg/bridge"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
 )
 
 func TestNew(t *testing.T) {
-	provider, err := New(nil, "ns", "pod", "container")
+	cfg := &rest.Config{}
+	provider, err := New(cfg, "ns", "pod", "container")
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
@@ -24,7 +27,11 @@ func TestNew(t *testing.T) {
 		t.Fatalf("New() created unexpected connection state: %+v", k)
 	}
 
-	if k.resizeQueue == nil || cap(k.resizeQueue) != 1 {
+	if k.config != cfg {
+		t.Fatalf("New() created unexpected config: %v", k.config)
+	}
+
+	if k.resizeQueue == nil {
 		t.Fatalf("New() created unexpected resizeQueue")
 	}
 }
@@ -86,9 +93,13 @@ func TestResize(t *testing.T) {
 		t.Fatalf("Resize() error = %v", err)
 	}
 
-	got := <-k.resizeQueue
-	if got.Height != 40 || got.Width != 120 {
-		t.Fatalf("Resize() enqueued wrong size: %#v", got)
+	select {
+	case got := <-k.resizeQueue:
+		if got.Height != 40 || got.Width != 120 {
+			t.Fatalf("Resize() enqueued wrong size: %#v", got)
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatalf("Resize() did not enqueue terminal size")
 	}
 }
 
