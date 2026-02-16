@@ -5,7 +5,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
@@ -28,7 +27,7 @@ func (d *dockersshdconn) Close() error {
 }
 
 func (d *dockersshdconn) Exec(ctx context.Context, execconfig bridge.ExecConfig) (<-chan bridge.ExecResult, error) {
-	exec, err := d.dockercli.ContainerExecCreate(ctx, d.containerName, types.ExecConfig{
+	exec, err := d.dockercli.ContainerExecCreate(ctx, d.containerName, container.ExecOptions{
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: execconfig.Tty, // only attach stderr if tty is enabled
@@ -45,7 +44,7 @@ func (d *dockersshdconn) Exec(ctx context.Context, execconfig bridge.ExecConfig)
 	execID := exec.ID
 	d.execId = exec.ID
 
-	attach, err := d.dockercli.ContainerExecAttach(ctx, execID, types.ExecStartCheck{
+	attach, err := d.dockercli.ContainerExecAttach(ctx, execID, container.ExecAttachOptions{
 		Detach: false,
 		Tty:    true,
 	})
