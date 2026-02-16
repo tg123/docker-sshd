@@ -48,7 +48,16 @@ jobs:
           go-version: '1.26.x'
           cache: true
 
-      - name: Run e2e smoke checks
+      - name: Run docker-sshd e2e check
         run: |
-          go run ./cmd/docker-sshd --help > /dev/null
+          docker run -d --rm --name docker-sshd-e2e-test alpine:3.20 sleep 300
+          ssh-keygen -t ed25519 -N '' -f /tmp/docker-sshd-e2e-key > /dev/null
+          go run ./cmd/docker-sshd --address 127.0.0.1 --port 2232 --server-key /tmp/docker-sshd-e2e-key &
+          sshd_pid=$!
+          trap "kill ${sshd_pid} || true; docker rm -f docker-sshd-e2e-test || true" EXIT
+          sleep 2
+          output="$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PreferredAuthentications=none -p 2232 docker-sshd-e2e-test@127.0.0.1 echo ok 2>/dev/null)"
+          test "${output}" = "ok"
+      - name: Run kube-sshd smoke check
+        run: |
           go run ./cmd/kube-sshd --help > /dev/null
