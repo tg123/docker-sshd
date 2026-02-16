@@ -53,7 +53,8 @@ func TestKubeSSHD(t *testing.T) {
 		t.Fatal("KUBE_SSHD_BIN is required")
 	}
 
-	pod := "docker-sshd-e2e-" + time.Now().Format("150405")
+	pod := "kube-sshd-e2e-" + strings.ToLower(time.Now().Format("150405.000000000"))
+	pod = strings.ReplaceAll(pod, ".", "-")
 	mustRun(t, "kubectl", "run", pod, "--image=busybox:1.36", "--restart=Never", "--command", "--", "sleep", "300")
 	defer run(t, "kubectl", "delete", "pod", pod, "--ignore-not-found=true", "--wait=false")
 	mustRun(t, "kubectl", "wait", "--for=condition=Ready", "pod/"+pod, "--timeout=120s")
