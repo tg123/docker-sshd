@@ -19,7 +19,7 @@ const execTimeout = 10 * time.Second
 type dockersshdconn struct {
 	containerName string
 	dockercli     *client.Client
-	execId        string
+	execID        string
 	initSize      bridge.ResizeOptions
 }
 
@@ -43,7 +43,7 @@ func (d *dockersshdconn) Exec(ctx context.Context, execconfig bridge.ExecConfig)
 	}
 
 	execID := exec.ID
-	d.execId = exec.ID
+	d.execID = exec.ID
 
 	attach, err := d.dockercli.ContainerExecAttach(ctx, execID, types.ExecStartCheck{
 		Detach: false,
@@ -124,12 +124,12 @@ func (d *dockersshdconn) Exec(ctx context.Context, execconfig bridge.ExecConfig)
 }
 
 func (d *dockersshdconn) Resize(ctx context.Context, size bridge.ResizeOptions) error {
-	if d.execId == "" {
+	if d.execID == "" {
 		d.initSize = size
 		return nil
 	}
 
-	return d.dockercli.ContainerExecResize(ctx, d.execId, container.ResizeOptions{
+	return d.dockercli.ContainerExecResize(ctx, d.execID, container.ResizeOptions{
 		Height: size.Height,
 		Width:  size.Width,
 	})

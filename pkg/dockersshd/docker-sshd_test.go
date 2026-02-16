@@ -65,7 +65,7 @@ func TestResizeAfterExecCallsDockerAPI(t *testing.T) {
 
 	conn := &dockersshdconn{
 		dockercli: newTestDockerClient(t, srv),
-		execId:    "exec-1",
+		execID:    "exec-1",
 	}
 
 	if err := conn.Resize(context.Background(), bridge.ResizeOptions{Height: 24, Width: 80}); err != nil {
@@ -86,7 +86,7 @@ func TestExecCreateErrorIncludesDockerMessage(t *testing.T) {
 	}
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost && r.URL.Path == "/v1.41/containers/c1/exec" {
+		if r.Method == http.MethodPost && r.URL.Path == "/v1.41/containers/test-container/exec" {
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				t.Fatalf("failed to decode request: %v", err)
 			}
@@ -101,7 +101,7 @@ func TestExecCreateErrorIncludesDockerMessage(t *testing.T) {
 	defer srv.Close()
 
 	conn := &dockersshdconn{
-		containerName: "c1",
+		containerName: "test-container",
 		dockercli:     newTestDockerClient(t, srv),
 		initSize:      bridge.ResizeOptions{Height: 20, Width: 40},
 	}
