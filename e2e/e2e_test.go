@@ -56,7 +56,11 @@ func TestKubeSSHD(t *testing.T) {
 	pod := "kube-sshd-e2e-" + strings.ToLower(time.Now().Format("150405.000000000"))
 	pod = strings.ReplaceAll(pod, ".", "-")
 	mustRun(t, "kubectl", "run", pod, "--image=busybox:1.36", "--restart=Never", "--command", "--", "sleep", "300")
-	defer run(t, "kubectl", "delete", "pod", pod, "--ignore-not-found=true", "--wait=false")
+	defer func() {
+		if out, err := run(t, "kubectl", "delete", "pod", pod, "--ignore-not-found=true", "--wait=false"); err != nil {
+			t.Logf("cleanup pod %s failed: %v\n%s", pod, err, out)
+		}
+	}()
 	mustRun(t, "kubectl", "wait", "--for=condition=Ready", "pod/"+pod, "--timeout=120s")
 
 	key := t.TempDir() + "/kube-sshd-e2e-key"
