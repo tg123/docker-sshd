@@ -1,5 +1,6 @@
 services:
   docker-sshd-e2e-target:
-    image: alpine:3.20
+    build:
+      context: ..
+      dockerfile: e2e/Dockerfile.target
     container_name: docker-sshd-e2e-test
-    command: ["sleep", "300"]

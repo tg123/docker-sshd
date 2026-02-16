@@ -28,21 +28,17 @@ jobs:
           go-version: '1.26.x'
           cache: true
 
-      - name: Run docker-sshd e2e check
+      - name: Build test binaries
         run: |
-          docker compose -f .github/e2e/docker-compose.yml up -d
-          sshd_pid=""
-          trap "test -n \"${sshd_pid}\" && kill ${sshd_pid} || true; docker compose -f .github/e2e/docker-compose.yml down || true" EXIT
-          ssh-keygen -t ed25519 -N '' -f /tmp/docker-sshd-e2e-key > /dev/null
-          go run ./cmd/docker-sshd --address 127.0.0.1 --port 2232 --server-key /tmp/docker-sshd-e2e-key &
-          sshd_pid=$!
-          output=""
-          for _ in $(seq 1 20); do
-            output="$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PreferredAuthentications=none -p 2232 docker-sshd-e2e-test@127.0.0.1 echo ok)" && break
-            sleep 1
-          done
-          test "${output}" = "ok" || (echo "docker-sshd e2e failed: expected 'ok', got '${output}'" && exit 1)
+          mkdir -p /tmp/bin
+          go build -o /tmp/bin/docker-sshd ./cmd/docker-sshd
+          go build -o /tmp/bin/kube-sshd ./cmd/kube-sshd
 
-      - name: Run kube-sshd smoke check
+      - name: Set up kind
+        uses: helm/kind-action@v1.12.0
+
+      - name: Run e2e tests
         run: |
-          go run ./cmd/kube-sshd --help > /dev/null
+          docker compose -f e2e/docker-compose.yml up -d
+          trap "docker compose -f e2e/docker-compose.yml down || true" EXIT
+          DOCKER_SSHD_E2E=1 KUBE_SSHD_E2E=1 DOCKER_SSHD_BIN=/tmp/bin/docker-sshd KUBE_SSHD_BIN=/tmp/bin/kube-sshd go test ./e2e -v
