@@ -84,11 +84,11 @@ func (c *fakeChannel) Stderr() io.ReadWriter { return c.stderr }
 func TestSessionHandleEnv(t *testing.T) {
 	s := &session{}
 	payload := ssh.Marshal(struct {
-		Name    string
-		Varible string
+		Name     string
+		Variable string
 	}{
-		Name:    "TERM",
-		Varible: "xterm-256color",
+		Name:     "TERM",
+		Variable: "xterm-256color",
 	})
 
 	if err := s.handleEnv(payload); err != nil {
