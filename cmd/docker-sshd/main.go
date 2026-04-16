@@ -8,7 +8,7 @@ import (
 	"github.com/tg123/docker-sshd/pkg/bridge"
 	"github.com/tg123/docker-sshd/pkg/dockersshd"
 
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/crypto/ssh"
@@ -60,7 +60,7 @@ func main() {
 		},
 		Action: func(c *cli.Context) error {
 
-			dockercli, err := client.NewClientWithOpts(client.FromEnv)
+			dockercli, err := client.New(client.FromEnv)
 			if err != nil {
 				return err
 			}
