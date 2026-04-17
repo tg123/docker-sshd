@@ -98,7 +98,7 @@ go get github.com/tg123/docker-sshd/cmd/docker-sshd
  * `DOCKER_CERT_PATH` to specify the directory from which to load the TLS certificates (ca.pem, cert.pem, key.pem).
  * `DOCKER_TLS_VERIFY` to enable or disable TLS verification (off by default).
 
-see <https://pkg.go.dev/github.com/docker/docker/client#FromEnv> for more detail
+see <https://pkg.go.dev/github.com/moby/moby/client#FromEnv> for more detail
 
 ## Connecting from vscode
 
