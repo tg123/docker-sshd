@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 	"github.com/tg123/docker-sshd/pkg/bridge"
 )
 

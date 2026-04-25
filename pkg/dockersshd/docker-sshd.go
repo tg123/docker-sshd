@@ -26,15 +26,20 @@ func (d *dockersshdconn) Close() error {
 }
 
 func (d *dockersshdconn) Exec(ctx context.Context, execconfig bridge.ExecConfig) (<-chan bridge.ExecResult, error) {
-	exec, err := d.dockercli.ExecCreate(ctx, d.containerName, client.ExecCreateOptions{
+	createOptions := client.ExecCreateOptions{
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: execconfig.Tty, // only attach stderr if tty is enabled
 		TTY:          execconfig.Tty,
 		Env:          execconfig.Env,
 		Cmd:          execconfig.Cmd,
-		ConsoleSize:  client.ConsoleSize{Height: d.initSize.Height, Width: d.initSize.Width},
-	})
+	}
+
+	if execconfig.Tty {
+		createOptions.ConsoleSize = client.ConsoleSize{Height: d.initSize.Height, Width: d.initSize.Width}
+	}
+
+	exec, err := d.dockercli.ExecCreate(ctx, d.containerName, createOptions)
 
 	if err != nil {
 		return nil, err
