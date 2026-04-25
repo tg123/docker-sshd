@@ -5,8 +5,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 	log "github.com/sirupsen/logrus"
 	"github.com/tg123/docker-sshd/pkg/bridge"
 )
@@ -27,14 +26,14 @@ func (d *dockersshdconn) Close() error {
 }
 
 func (d *dockersshdconn) Exec(ctx context.Context, execconfig bridge.ExecConfig) (<-chan bridge.ExecResult, error) {
-	exec, err := d.dockercli.ContainerExecCreate(ctx, d.containerName, container.ExecOptions{
+	exec, err := d.dockercli.ExecCreate(ctx, d.containerName, client.ExecCreateOptions{
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: execconfig.Tty, // only attach stderr if tty is enabled
-		Tty:          execconfig.Tty,
+		TTY:          execconfig.Tty,
 		Env:          execconfig.Env,
 		Cmd:          execconfig.Cmd,
-		ConsoleSize:  &[2]uint{d.initSize.Height, d.initSize.Width},
+		ConsoleSize:  client.ConsoleSize{Height: d.initSize.Height, Width: d.initSize.Width},
 	})
 
 	if err != nil {
@@ -44,9 +43,8 @@ func (d *dockersshdconn) Exec(ctx context.Context, execconfig bridge.ExecConfig)
 	execID := exec.ID
 	d.execId = exec.ID
 
-	attach, err := d.dockercli.ContainerExecAttach(ctx, execID, container.ExecAttachOptions{
-		Detach: false,
-		Tty:    true,
+	attach, err := d.dockercli.ExecAttach(ctx, execID, client.ExecAttachOptions{
+		TTY: true,
 	})
 
 	if err != nil {
@@ -91,7 +89,7 @@ func (d *dockersshdconn) Exec(ctx context.Context, execconfig bridge.ExecConfig)
 				break
 			}
 
-			exec, err := d.dockercli.ContainerExecInspect(context.Background(), execID)
+			exec, err := d.dockercli.ExecInspect(context.Background(), execID, client.ExecInspectOptions{})
 			if err != nil {
 				log.Warningf("inspect exec %v failed %v", execID, err)
 				time.Sleep(1 * time.Second)
@@ -128,10 +126,11 @@ func (d *dockersshdconn) Resize(ctx context.Context, size bridge.ResizeOptions) 
 		return nil
 	}
 
-	return d.dockercli.ContainerExecResize(ctx, d.execId, container.ResizeOptions{
+	_, err := d.dockercli.ExecResize(ctx, d.execId, client.ExecResizeOptions{
 		Height: size.Height,
 		Width:  size.Width,
 	})
+	return err
 }
 
 func New(dockercli *client.Client, containerName string) (bridge.SessionProvider, error) {
