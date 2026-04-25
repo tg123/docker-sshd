@@ -1,4 +1,4 @@
-# docker-sshd && kube-sshd
+# docker-sshd && kube-sshd && cri-sshd
 
 ## docker-sshd
 
@@ -53,6 +53,11 @@ just like `kubectl exec -ti POD /bin/bash`.
                 |                                                              |
                 +--------------------------------------------------------------+
 ```
+
+## cri-sshd
+
+with `cri-sshd`, you can `ssh` into CRI containers from anywhere,
+just like `crictl exec -i -t CONTAINER_ID /bin/sh`.
 
 ## Install
 
