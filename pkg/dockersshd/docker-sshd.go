@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/moby/moby/client"
-	log "github.com/sirupsen/logrus"
 	"github.com/tg123/docker-sshd/pkg/bridge"
 )
 
@@ -19,6 +18,7 @@ type dockersshdconn struct {
 	dockercli     *client.Client
 	execId        string
 	initSize      bridge.ResizeOptions
+	logger        bridge.Logger
 }
 
 func (d *dockersshdconn) Close() error {
@@ -51,7 +51,7 @@ func (d *dockersshdconn) Exec(ctx context.Context, execconfig bridge.ExecConfig)
 		return nil, err
 	}
 
-	log.Debugf("docker exec [%v] in container [%v] started", execconfig.Cmd, d.containerName)
+	d.logger.Debugf("docker exec [%v] in container [%v] started", execconfig.Cmd, d.containerName)
 
 	r := make(chan bridge.ExecResult)
 
@@ -74,30 +74,30 @@ func (d *dockersshdconn) Exec(ctx context.Context, execconfig bridge.ExecConfig)
 		select {
 		case err = <-done:
 		case <-ctx.Done():
-			log.Warningf("exec [%v] in container [%v] context cancelled", execconfig.Cmd, d.containerName)
+			d.logger.Warnf("exec [%v] in container [%v] context cancelled", execconfig.Cmd, d.containerName)
 			return
 		}
 
-		log.Debugf("docker exec [%v] in container [%v] done error [%v]", execconfig.Cmd, d.containerName, err)
+		d.logger.Debugf("docker exec [%v] in container [%v] done error [%v]", execconfig.Cmd, d.containerName, err)
 
 		exitCode := -1
 		st := time.Now()
 
 		for {
 			if time.Since(st) > execTimeout {
-				log.Warningf("exec [%v] is still running or inspect error after %v timeout", execID, execTimeout)
+				d.logger.Warnf("exec [%v] is still running or inspect error after %v timeout", execID, execTimeout)
 				break
 			}
 
 			exec, err := d.dockercli.ExecInspect(context.Background(), execID, client.ExecInspectOptions{})
 			if err != nil {
-				log.Warningf("inspect exec %v failed %v", execID, err)
+				d.logger.Warnf("inspect exec %v failed %v", execID, err)
 				time.Sleep(1 * time.Second)
 				continue
 			}
 
 			if exec.Running { // this should not happen
-				log.Warnf("exec %v is still running in container %v", execID, exec.ContainerID)
+				d.logger.Warnf("exec %v is still running in container %v", execID, exec.ContainerID)
 				time.Sleep(1 * time.Second)
 				continue
 			}
@@ -133,9 +133,14 @@ func (d *dockersshdconn) Resize(ctx context.Context, size bridge.ResizeOptions) 
 	return err
 }
 
-func New(dockercli *client.Client, containerName string) (bridge.SessionProvider, error) {
+func New(dockercli *client.Client, containerName string, logger bridge.Logger) (bridge.SessionProvider, error) {
+	if logger == nil {
+		logger = bridge.NopLogger()
+	}
+
 	return &dockersshdconn{
 		containerName: containerName,
 		dockercli:     dockercli,
+		logger:        logger,
 	}, nil
 }

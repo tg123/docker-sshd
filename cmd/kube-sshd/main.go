@@ -125,6 +125,7 @@ func main() {
 
 				b, err := bridge.New(c, sshserver, &bridge.BridgeConfig{
 					DefaultCmd: config.Cmd,
+					Logger:     log.StandardLogger(),
 				}, func(sc *ssh.ServerConn) (bridge.SessionProvider, error) {
 
 					full := sc.User()

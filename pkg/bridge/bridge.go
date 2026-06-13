@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -42,6 +41,10 @@ type SessionProvider interface {
 type BridgeConfig struct {
 	DefaultCmd  string
 	ExecTimeout time.Duration
+
+	// Logger receives the library's diagnostic logs. When nil, logging is
+	// disabled and nothing is written.
+	Logger Logger
 }
 
 type Bridge struct {
@@ -49,6 +52,12 @@ type Bridge struct {
 	sshConn    ssh.Conn
 	chans      <-chan ssh.NewChannel
 	provider   SessionProvider
+	logger     Logger
+}
+
+// log returns a non-nil Logger, falling back to a no-op logger.
+func (b *Bridge) log() Logger {
+	return orNop(b.logger)
 }
 
 func (b *Bridge) Start() {
@@ -69,14 +78,14 @@ func (b *Bridge) handleNewChannels(chans <-chan ssh.NewChannel) {
 		t := newChannel.ChannelType()
 		handler, ok := handlers[t]
 		if !ok {
-			log.Warnf("channel type is not supported, got [%v]", t)
+			b.log().Warnf("channel type is not supported, got [%v]", t)
 			_ = newChannel.Reject(ssh.UnknownChannelType, fmt.Sprintf("unknown channel type: %s", t))
 			continue
 		}
 
 		channel, requests, err := newChannel.Accept()
 		if err != nil {
-			log.Warnf("could not accept channel %v", err)
+			b.log().Warnf("could not accept channel %v", err)
 			continue
 		}
 
@@ -153,7 +162,7 @@ func (s *session) doResize() error {
 		return nil
 	}
 
-	log.Debugf("resize %v %v", s.width, s.height)
+	s.bridge.log().Debugf("resize %v %v", s.width, s.height)
 
 	s.resizeLock.Lock()
 	defer s.resizeLock.Unlock()
@@ -183,7 +192,7 @@ func (s *session) exec(cmd string) error {
 
 	s.execCalled = true
 
-	log.Debugf("exec [%v] in container", cmd)
+	s.bridge.log().Debugf("exec [%v] in container", cmd)
 
 	r, err := s.bridge.provider.Exec(context.Background(), ExecConfig{
 		Input:  s.channel,
@@ -206,10 +215,10 @@ func (s *session) exec(cmd string) error {
 		result := <-r
 		exitCode := result.ExitCode
 
-		log.Infof("exec [%v] in container exit status %v", cmd, exitCode)
+		s.bridge.log().Infof("exec [%v] in container exit status %v", cmd, exitCode)
 
 		ok, err := s.channel.SendRequest("exit-status", false, ssh.Marshal(&struct{ uint32 }{uint32(exitCode)}))
-		log.Printf("send exit status %v %v", ok, err)
+		s.bridge.log().Debugf("send exit status %v %v", ok, err)
 	}()
 
 	return nil
@@ -268,7 +277,7 @@ func (b *Bridge) handleSession(channel ssh.Channel, requests <-chan *ssh.Request
 		}
 
 		if err != nil {
-			log.Warnf("failed to handle %v request: %v", req.Type, err)
+			b.log().Warnf("failed to handle %v request: %v", req.Type, err)
 		}
 
 		if req.WantReply {
@@ -277,13 +286,13 @@ func (b *Bridge) handleSession(channel ssh.Channel, requests <-chan *ssh.Request
 	}
 }
 
-func handleKeepAlive(reqs <-chan *ssh.Request) {
+func (b *Bridge) handleKeepAlive(reqs <-chan *ssh.Request) {
 	for req := range reqs {
 		if req.Type == "keepalive@openssh.com" {
 			_ = req.Reply(true, nil)
 			continue
 		}
-		log.Printf("recieved out-of-band request: %v", req)
+		b.log().Debugf("recieved out-of-band request: %v", req)
 	}
 }
 
@@ -299,7 +308,7 @@ func (b *Bridge) handleDirectTcpip(channel ssh.Channel, requests <-chan *ssh.Req
 	go ssh.DiscardRequests(requests)
 
 	if err := ssh.Unmarshal(payload, &msg); err != nil {
-		log.Errorf("failed to unmarshal direct-tcpip payload: %v", err)
+		b.log().Errorf("failed to unmarshal direct-tcpip payload: %v", err)
 		return
 	}
 
@@ -310,12 +319,12 @@ func (b *Bridge) handleDirectTcpip(channel ssh.Channel, requests <-chan *ssh.Req
 	})
 
 	if err != nil {
-		log.Errorf("direct-tcpip requires [nc] installed inside container, launch nc failed: %v", err)
+		b.log().Errorf("direct-tcpip requires [nc] installed inside container, launch nc failed: %v", err)
 		return
 	}
 
 	if err := (<-r).Error; err != nil {
-		log.Warningf("direct-tcpip io copy failed: %v", err)
+		b.log().Warnf("direct-tcpip io copy failed: %v", err)
 	}
 }
 
@@ -335,9 +344,10 @@ func New(conn net.Conn, sshconfig *ssh.ServerConfig, bridgeconfig *BridgeConfig,
 		provider:   provider,
 		chans:      chans,
 		defaultcmd: bridgeconfig.DefaultCmd,
+		logger:     bridgeconfig.Logger,
 	}
 
-	go handleKeepAlive(reqs)
+	go b.handleKeepAlive(reqs)
 
 	return b, nil
 }
