@@ -292,7 +292,7 @@ func (b *Bridge) handleKeepAlive(reqs <-chan *ssh.Request) {
 			_ = req.Reply(true, nil)
 			continue
 		}
-		b.log().Debugf("recieved out-of-band request: %v", req)
+		b.log().Debugf("received out-of-band request: %v", req)
 	}
 }
 
