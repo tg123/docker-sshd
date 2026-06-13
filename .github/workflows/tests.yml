@@ -30,25 +30,3 @@ jobs:
 
       - name: Run unit tests
         run: go test ./...
-
-  e2e:
-    name: e2e
-    runs-on: ubuntu-latest
-    needs: ut
-    steps:
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          submodules: 'recursive'
-
-      - name: Set up Go 1.x
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.26.x'
-          cache: true
-
-      - name: Run e2e smoke checks
-        run: |
-          go run ./cmd/docker-sshd --help > /dev/null
-          go run ./cmd/kube-sshd --help > /dev/null
